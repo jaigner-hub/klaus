@@ -1,5 +1,6 @@
 from collections.abc import Callable
 
+from local_agent.context import maybe_compress
 from local_agent.ollama_client import OllamaClient
 from local_agent.safety.confirm import guarded_dispatch
 from local_agent.tools.registry import ToolRegistry
@@ -27,6 +28,7 @@ async def run_agent_turn(
     tools = registry.to_ollama_schemas()
 
     for _ in range(max_iterations):
+        await maybe_compress(client, messages)
         text, tool_calls = await client.chat_with_tools(
             messages, tools, on_token=on_token
         )
