@@ -6,10 +6,12 @@ from pydantic import BaseModel, Field
 _DEFAULT_CONFIG_PATH = Path.home() / ".local-agent" / "config.toml"
 
 _DEFAULT_SYSTEM_PROMPT = (
-    "You are a helpful coding assistant running locally. "
-    "You have access to tools for reading files, executing shell commands, "
-    "and interacting with git. Think step by step before acting. "
-    "Always prefer reading code before modifying it."
+    "You are a helpful local coding assistant with access to file system tools. "
+    "When you use tools, interpret their results and respond in plain English — "
+    "never output raw JSON or repeat the tool result verbatim. "
+    "Call tools when the user asks you to read or list files; "
+    "then summarise what you found in a clear, human-readable way. "
+    "Think step by step and prefer reading code before modifying it."
 )
 
 

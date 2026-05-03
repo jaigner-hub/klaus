@@ -1,7 +1,65 @@
 import pytest
 
 from local_agent.config import AgentConfig
-from local_agent.ollama_client import OllamaClient
+from local_agent.ollama_client import OllamaClient, _parse_content_tool_call
+
+# ── _parse_content_tool_call ───────────────────────────────────────────────────
+
+def test_parse_plain_json_tool_call():
+    text = '{"name": "read_file", "arguments": {"path": "/tmp/x"}}'
+    result = _parse_content_tool_call(text)
+    assert result is not None
+    assert len(result) == 1
+    assert result[0].function.name == "read_file"
+    assert result[0].function.arguments == {"path": "/tmp/x"}
+
+
+def test_parse_fenced_json_tool_call():
+    text = '```json\n{"name": "list_directory", "arguments": {"path": "/tmp"}}\n```'
+    result = _parse_content_tool_call(text)
+    assert result is not None
+    assert len(result) == 1
+    assert result[0].function.name == "list_directory"
+
+
+def test_parse_fenced_json_without_language_tag():
+    text = '```\n{"name": "read_file", "arguments": {"path": "/a"}}\n```'
+    result = _parse_content_tool_call(text)
+    assert result is not None
+    assert result[0].function.name == "read_file"
+
+
+def test_parse_multiple_compact_json_lines():
+    text = (
+        '{"name": "read_file", "arguments": {"path": "/a"}}\n'
+        '{"name": "read_file", "arguments": {"path": "/b"}}'
+    )
+    result = _parse_content_tool_call(text)
+    assert result is not None
+    assert len(result) == 2
+    assert result[0].function.arguments["path"] == "/a"
+    assert result[1].function.arguments["path"] == "/b"
+
+
+def test_parse_fenced_json_embedded_after_text():
+    text = (
+        "Sure, let me list the directory for you:\n\n"
+        "```json\n"
+        '{"name": "list_directory", "arguments": {"path": "./src"}}\n'
+        "```\n\n"
+        "I'll summarise the results once I have them."
+    )
+    result = _parse_content_tool_call(text)
+    assert result is not None
+    assert result[0].function.name == "list_directory"
+
+
+def test_parse_returns_none_for_plain_text():
+    assert _parse_content_tool_call("Hello, how can I help?") is None
+
+
+def test_parse_returns_none_for_json_without_name():
+    assert _parse_content_tool_call('{"foo": "bar"}') is None
 
 # ── unit: construction ─────────────────────────────────────────────────────────
 
