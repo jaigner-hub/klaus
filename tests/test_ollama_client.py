@@ -3,7 +3,6 @@ import pytest
 from local_agent.config import AgentConfig
 from local_agent.ollama_client import OllamaClient
 
-
 # ── unit: construction ─────────────────────────────────────────────────────────
 
 def test_client_construction():
@@ -40,7 +39,9 @@ async def test_chat_stream_yields_strings():
 async def test_chat_stream_response_nonempty():
     cfg = AgentConfig()
     client = OllamaClient(cfg)
-    messages = [{"role": "user", "content": "What is 2 + 2? Answer with a single number."}]
+    messages = [
+        {"role": "user", "content": "What is 2 + 2? Answer with a single number."}
+    ]
 
     full_response = ""
     async for token in client.chat_stream(messages):

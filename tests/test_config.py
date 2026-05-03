@@ -1,10 +1,6 @@
 import tomllib
-from pathlib import Path
-
-import pytest
 
 from local_agent.config import AgentConfig, McpServerConfig, load_config
-
 
 # ── defaults ──────────────────────────────────────────────────────────────────
 
@@ -71,7 +67,10 @@ def test_missing_keys_fall_back_to_defaults(tmp_path):
 def test_loads_mcp_servers(tmp_path):
     config_path = tmp_path / "config.toml"
     config_path.write_text(
-        '[[mcp_servers]]\nname = "filesystem"\ncommand = "npx"\nargs = ["-y", "server-fs"]\n'
+        "[[mcp_servers]]\n"
+        'name = "filesystem"\n'
+        'command = "npx"\n'
+        'args = ["-y", "server-fs"]\n'
     )
     cfg = load_config(config_path)
     assert len(cfg.mcp_servers) == 1
