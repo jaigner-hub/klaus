@@ -11,6 +11,7 @@ from rich.syntax import Syntax
 from local_agent.agent import run_agent_turn
 from local_agent.config import AgentConfig, load_config
 from local_agent.ollama_client import OllamaClient
+from local_agent.session import Session
 from local_agent.tools.mcp_bridge import register_mcp_servers
 from local_agent.tools.registry import ToolRegistry
 
@@ -60,12 +61,16 @@ async def run_repl(config: AgentConfig) -> None:
     registry = ToolRegistry.with_builtins()
     mcp_connections = await register_mcp_servers(config.mcp_servers, registry)
     messages: list[dict] = [{"role": "system", "content": config.system_prompt}]
+    session = Session()
 
     console.print(
         "[bold cyan]Klaus[/bold cyan] — local coding agent  "
         f"[dim]{config.model}[/dim]"
     )
-    console.print("[dim]Ctrl-C or Ctrl-D to exit.[/dim]\n")
+    console.print(
+        f"[dim]Session {session.session_id[:8]}…  "
+        "Ctrl-C or Ctrl-D to exit.[/dim]\n"
+    )
 
     try:
         while True:
@@ -75,11 +80,43 @@ async def run_repl(config: AgentConfig) -> None:
                 console.print("\n[dim]Bye.[/dim]")
                 break
 
-            if not user_input.strip():
+            stripped = user_input.strip()
+            if not stripped:
                 continue
 
+            # ── built-in REPL commands ─────────────────────────────────────
+            if stripped.startswith("/load "):
+                sid = stripped[6:].strip()
+                try:
+                    loaded = Session(session_id=sid)
+                    loaded_messages = loaded.load()
+                    messages.clear()
+                    messages.append({"role": "system", "content": config.system_prompt})
+                    messages.extend(loaded_messages)
+                    session = loaded
+                    console.print(
+                        f"[dim]Loaded session {sid[:8]}… "
+                        f"({len(loaded_messages)} messages)[/dim]\n"
+                    )
+                except FileNotFoundError:
+                    console.print(f"[red]Session not found:[/red] {sid}\n")
+                continue
+
+            if stripped == "/sessions":
+                ids = Session.list_sessions()
+                if ids:
+                    for sid in ids[:10]:
+                        marker = " [bold cyan]←[/bold cyan]" if sid == session.session_id else ""
+                        console.print(f"  {sid[:8]}…{marker}")
+                else:
+                    console.print("[dim]No sessions saved yet.[/dim]")
+                console.print()
+                continue
+
+            # ── normal agent turn ──────────────────────────────────────────
             console.print()
             accumulated = ""
+            prev_len = len(messages)
 
             with Live(
                 console=console, refresh_per_second=15, vertical_overflow="visible"
@@ -120,6 +157,9 @@ async def run_repl(config: AgentConfig) -> None:
                     on_tool_result=on_tool_result,
                     on_write_confirm=on_write_confirm,
                 )
+
+            for msg in messages[prev_len:]:
+                session.append(msg)
 
             console.print()
     finally:
