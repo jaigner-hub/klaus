@@ -1,6 +1,7 @@
 from collections.abc import Callable
 
 from local_agent.ollama_client import OllamaClient
+from local_agent.safety.confirm import guarded_dispatch
 from local_agent.tools.registry import ToolRegistry
 
 MAX_ITERATIONS = 25
@@ -14,6 +15,7 @@ async def run_agent_turn(
     on_token: Callable[[str], None] | None = None,
     on_tool_call: Callable[[str, dict], None] | None = None,
     on_tool_result: Callable[[str, str], None] | None = None,
+    on_write_confirm: Callable[[str, dict, str], bool] | None = None,
     max_iterations: int = MAX_ITERATIONS,
 ) -> str:
     """Run the tool-use loop for one user turn.
@@ -42,7 +44,7 @@ async def run_agent_turn(
             if on_tool_call:
                 on_tool_call(name, args)
 
-            result = await registry.dispatch(name, args)
+            result = await guarded_dispatch(name, args, registry, on_write_confirm)
 
             if on_tool_result:
                 on_tool_result(name, result)

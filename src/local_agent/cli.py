@@ -5,7 +5,8 @@ from collections.abc import Callable
 from rich.console import Console
 from rich.live import Live
 from rich.markdown import Markdown
-from rich.prompt import Prompt
+from rich.prompt import Confirm, Prompt
+from rich.syntax import Syntax
 
 from local_agent.agent import run_agent_turn
 from local_agent.config import AgentConfig, load_config
@@ -99,11 +100,25 @@ async def run_repl(config: AgentConfig) -> None:
                     accumulated += token
                     live.update(Markdown(accumulated))
 
+                def on_write_confirm(name: str, args: dict, diff: str) -> bool:
+                    live.console.print()
+                    live.console.print(
+                        f"  [bold yellow]✎[/bold yellow] {name}({_fmt_args(args)})"
+                    )
+                    if diff:
+                        live.console.print(
+                            Syntax(diff, "diff", theme="ansi_dark", word_wrap=True)
+                        )
+                    else:
+                        live.console.print("[dim]  (no changes detected)[/dim]")
+                    return Confirm.ask("  Apply?", default=True, console=live.console)
+
                 await run_agent_turn(
                     client, registry, messages, user_input,
                     on_token=on_token,
                     on_tool_call=on_tool_call,
                     on_tool_result=on_tool_result,
+                    on_write_confirm=on_write_confirm,
                 )
 
             console.print()
