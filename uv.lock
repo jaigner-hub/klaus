@@ -2,6 +2,12 @@ version = 1
 revision = 3
 requires-python = ">=3.11"
 
+[manifest]
+members = [
+    "local-agent",
+    "local-agent-shell-mcp",
+]
+
 [[package]]
 name = "annotated-doc"
 version = "0.0.4"
@@ -306,6 +312,7 @@ dependencies = [
 
 [package.dev-dependencies]
 dev = [
+    { name = "local-agent-shell-mcp" },
     { name = "pytest" },
     { name = "pytest-asyncio" },
     { name = "ruff" },
@@ -322,9 +329,33 @@ requires-dist = [
 
 [package.metadata.requires-dev]
 dev = [
+    { name = "local-agent-shell-mcp", editable = "packages/shell-mcp" },
     { name = "pytest", specifier = ">=8" },
     { name = "pytest-asyncio", specifier = ">=0.23" },
     { name = "ruff", specifier = ">=0.4" },
+]
+
+[[package]]
+name = "local-agent-shell-mcp"
+version = "0.1.0"
+source = { editable = "packages/shell-mcp" }
+dependencies = [
+    { name = "mcp" },
+]
+
+[package.dev-dependencies]
+dev = [
+    { name = "pytest" },
+    { name = "pytest-asyncio" },
+]
+
+[package.metadata]
+requires-dist = [{ name = "mcp", specifier = ">=1.0" }]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "pytest", specifier = ">=8" },
+    { name = "pytest-asyncio", specifier = ">=0.23" },
 ]
 
 [[package]]

@@ -1,0 +1,25 @@
+[project]
+name = "local-agent-shell-mcp"
+version = "0.1.0"
+description = "Shell-exec MCP server with safety enforcement for Klaus"
+requires-python = ">=3.11"
+dependencies = [
+    "mcp>=1.0",
+]
+
+[project.scripts]
+local-agent-shell-mcp = "local_agent_shell_mcp.__main__:main"
+
+[dependency-groups]
+dev = [
+    "pytest>=8",
+    "pytest-asyncio>=0.23",
+]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+
+[build-system]
+requires = ["uv_build>=0.11.1,<0.12.0"]
+build-backend = "uv_build"
