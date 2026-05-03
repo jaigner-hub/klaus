@@ -1,0 +1,13 @@
+model = "qwen2.5-coder:7b"
+ollama_base_url = "http://localhost:11434"
+# system_prompt_path = "/path/to/system_prompt.txt"
+
+[[mcp_servers]]
+name = "filesystem"
+command = "npx"
+args = ["-y", "@modelcontextprotocol/server-filesystem", "/home/user/projects"]
+
+[[mcp_servers]]
+name = "git"
+command = "uvx"
+args = ["mcp-server-git", "--repository", "/home/user/projects/myrepo"]
