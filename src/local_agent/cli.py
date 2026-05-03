@@ -10,6 +10,7 @@ from rich.prompt import Prompt
 from local_agent.agent import run_agent_turn
 from local_agent.config import AgentConfig, load_config
 from local_agent.ollama_client import OllamaClient
+from local_agent.tools.mcp_bridge import register_mcp_servers
 from local_agent.tools.registry import ToolRegistry
 
 
@@ -56,6 +57,7 @@ async def run_repl(config: AgentConfig) -> None:
     console = Console()
     client = OllamaClient(config)
     registry = ToolRegistry.with_builtins()
+    mcp_connections = await register_mcp_servers(config.mcp_servers, registry)
     messages: list[dict] = [{"role": "system", "content": config.system_prompt}]
 
     console.print(
@@ -64,46 +66,53 @@ async def run_repl(config: AgentConfig) -> None:
     )
     console.print("[dim]Ctrl-C or Ctrl-D to exit.[/dim]\n")
 
-    while True:
-        try:
-            user_input = Prompt.ask("[bold green]>[/bold green]")
-        except (EOFError, KeyboardInterrupt):
-            console.print("\n[dim]Bye.[/dim]")
-            break
+    try:
+        while True:
+            try:
+                user_input = Prompt.ask("[bold green]>[/bold green]")
+            except (EOFError, KeyboardInterrupt):
+                console.print("\n[dim]Bye.[/dim]")
+                break
 
-        if not user_input.strip():
-            continue
+            if not user_input.strip():
+                continue
 
-        console.print()
-        accumulated = ""
+            console.print()
+            accumulated = ""
 
-        with Live(
-            console=console, refresh_per_second=15, vertical_overflow="visible"
-        ) as live:
+            with Live(
+                console=console, refresh_per_second=15, vertical_overflow="visible"
+            ) as live:
 
-            def on_tool_call(name: str, args: dict) -> None:
-                live.console.print(
-                    f"  [bold blue]→[/bold blue] {name}({_fmt_args(args)})"
+                def on_tool_call(name: str, args: dict) -> None:
+                    live.console.print(
+                        f"  [bold blue]→[/bold blue] {name}({_fmt_args(args)})"
+                    )
+
+                def on_tool_result(name: str, result: str) -> None:
+                    live.console.print(
+                        f"  [bold green]←[/bold green] {_fmt_result(name, result)}"
+                    )
+
+                def on_token(token: str) -> None:
+                    nonlocal accumulated
+                    accumulated += token
+                    live.update(Markdown(accumulated))
+
+                await run_agent_turn(
+                    client, registry, messages, user_input,
+                    on_token=on_token,
+                    on_tool_call=on_tool_call,
+                    on_tool_result=on_tool_result,
                 )
 
-            def on_tool_result(name: str, result: str) -> None:
-                live.console.print(
-                    f"  [bold green]←[/bold green] {_fmt_result(name, result)}"
-                )
-
-            def on_token(token: str) -> None:
-                nonlocal accumulated
-                accumulated += token
-                live.update(Markdown(accumulated))
-
-            await run_agent_turn(
-                client, registry, messages, user_input,
-                on_token=on_token,
-                on_tool_call=on_tool_call,
-                on_tool_result=on_tool_result,
-            )
-
-        console.print()
+            console.print()
+    finally:
+        for conn in mcp_connections:
+            try:
+                await conn.close()
+            except BaseException:
+                pass
 
 
 def main() -> None:
